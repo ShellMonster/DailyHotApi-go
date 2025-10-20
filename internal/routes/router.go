@@ -72,7 +72,7 @@ func (r *Registry) handleIndex(c *fiber.Ctx) error {
 		"message": "DailyHotApi - Go 版本",
 		"version": "1.0.0",
 		"routes":  routes,
-		"docs":    "https://github.com/ShellMonster/dailyhot-go",
+		"docs":    "https://github.com/ShellMonster/DailyHotApi-go",
 	})
 }
 
