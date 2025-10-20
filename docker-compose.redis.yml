@@ -1,0 +1,110 @@
+# Docker Compose Redis 扩展配置文件
+# 此文件用于与 docker-compose.yml 一起使用，启用 Redis 缓存
+#
+# 使用方法：
+#   # 同时加载基础配置和 Redis 配置
+#   docker-compose -f docker-compose.yml -f docker-compose.redis.yml up
+#
+#   # 后台运行
+#   docker-compose -f docker-compose.yml -f docker-compose.redis.yml up -d
+#
+#   # 查看日志
+#   docker-compose -f docker-compose.yml -f docker-compose.redis.yml logs -f
+#
+# 优势：
+#   - 启用双层缓存（L1: BigCache + L2: Redis）
+#   - 支持 Redis 持久化，数据不丢失
+#   - 支持跨容器/跨服务器缓存共享
+#   - 生产环境推荐配置
+
+version: '3.8'
+
+services:
+  # Redis 缓存服务
+  redis:
+    image: redis:7-alpine  # 使用轻量级的 Alpine 版本
+    container_name: dailyhot-redis
+    ports:
+      - "6379:6379"  # 映射端口到主机（可选，用于外部访问）
+    command: redis-server --appendonly yes  # 启用 AOF 持久化，确保数据不丢失
+    restart: unless-stopped  # 自动重启策略
+    networks:
+      - dailyhot-network
+    volumes:
+      # 数据持久化：防止容器重启后数据丢失
+      - redis-data:/data
+    healthcheck:
+      # 健康检查：确保 Redis 正常运行
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    environment:
+      # Redis 相关配置（可选）
+      - REDIS_LOG_LEVEL=notice
+
+  # API 服务配置覆盖（启用 Redis）
+  api:
+    # 依赖 Redis 服务，确保 Redis 先启动
+    depends_on:
+      redis:
+        condition: service_healthy  # 等待 Redis 健康检查通过
+    environment:
+      # 覆盖基础配置：启用 Redis
+      - DAILYHOT_REDIS_ENABLED=true  # ✅ 启用 Redis
+      - DAILYHOT_REDIS_HOST=redis    # Redis 服务名（Docker 内部 DNS）
+      - DAILYHOT_REDIS_PORT=6379     # Redis 端口
+      - DAILYHOT_REDIS_DB=0          # Redis 数据库编号
+      - DAILYHOT_REDIS_POOL_SIZE=10  # 连接池大小
+      - DAILYHOT_REDIS_TIMEOUT=5s    # 连接超时时间
+    # 添加额外配置
+    profiles:
+      - redis  # 可以通过 --profile redis 选择性启用
+
+# 网络配置（与基础配置一致）
+networks:
+  dailyhot-network:
+    driver: bridge
+
+# 数据卷配置
+volumes:
+  # Redis 数据持久化卷
+  redis-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./redis-data  # 本地 redis-data 目录
+
+# 使用提示
+# ============================================================================
+# 场景 1：开发环境（不需要 Redis）
+#   docker-compose up
+#   - 仅启动 API 服务
+#   - 使用内存缓存（BigCache）
+#   - 容器重启后缓存丢失
+#
+# 场景 2：生产环境（需要 Redis 持久化）
+#   docker-compose -f docker-compose.yml -f docker-compose.redis.yml up
+#   - 同时启动 API 和 Redis
+#   - 支持双层缓存
+#   - 支持缓存持久化
+#   - 支持多容器/多服务器缓存共享
+#
+# 场景 3：后台运行
+#   docker-compose -f docker-compose.yml -f docker-compose.redis.yml up -d
+#
+# 场景 4：查看日志
+#   docker-compose -f docker-compose.yml -f docker-compose.redis.yml logs -f api
+#   docker-compose -f docker-compose.yml -f docker-compose.redis.yml logs -f redis
+#
+# 场景 5：进入 Redis 容器
+#   docker-compose -f docker-compose.yml -f docker-compose.redis.yml exec redis sh
+#   redis-cli INFO stats    # 查看 Redis 统计信息
+#   redis-cli DBSIZE        # 查看缓存数据量
+#   redis-cli KEYS "*"      # 列出所有缓存键
+#
+# 场景 6：停止服务
+#   docker-compose -f docker-compose.yml -f docker-compose.redis.yml down
+#   docker-compose -f docker-compose.yml -f docker-compose.redis.yml down -v  # 删除卷
+# ============================================================================

@@ -1,0 +1,52 @@
+# Docker Compose 基础配置文件 - DailyHotApi 服务
+# 此配置包含 API 服务，不包含 Redis
+#
+# 使用场景：
+#   1. 开发环境（不需要持久化缓存）
+#   2. 仅测试 API 功能
+#   3. 资源受限的环境
+#
+# 使用方法：
+#   docker-compose up              # 不使用 Redis
+#
+# 启用 Redis 缓存：
+#   docker-compose -f docker-compose.yml -f docker-compose.redis.yml up
+#
+# 注：version 字段自 Docker Compose v1.27.0 之后已过时，但保留兼容性
+
+version: '3.8'
+
+services:
+  # API 服务（主服务）
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dailyhot-api
+    ports:
+      - "6688:6688"  # API 服务端口
+    environment:
+      # 基础配置：不启用 Redis
+      # 如果需要启用 Redis，请使用 docker-compose.redis.yml 覆盖此配置
+      - DAILYHOT_SERVER_PORT=6688
+      - DAILYHOT_SERVER_HOST=0.0.0.0
+      - DAILYHOT_REDIS_ENABLED=false  # ✅ 禁用 Redis
+    restart: unless-stopped  # 自动重启策略
+    networks:
+      - dailyhot-network
+    volumes:
+      # 挂载日志目录到主机，方便查看日志
+      - ./logs:/app/logs
+      # 挂载配置文件（可选，用于动态修改配置）
+      - ./config.yaml:/app/config.yaml:ro
+    healthcheck:
+      # 每 30 秒检查一次 API 健康状态
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:6688/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+# 网络配置
+networks:
+  dailyhot-network:
+    driver: bridge

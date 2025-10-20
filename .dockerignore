@@ -1,0 +1,36 @@
+# 忽略的文件和目录,加快 Docker 构建速度
+
+# Git 相关
+.git
+.gitignore
+
+# IDE 相关
+.vscode
+.idea
+*.swp
+*.swo
+
+# 日志文件
+logs/
+*.log
+
+# 临时文件
+tmp/
+temp/
+
+# 测试覆盖率
+coverage.out
+*.test
+
+# 构建产物
+bin/
+dist/
+
+# 文档
+README.md
+docs/
+
+# Docker 相关
+Dockerfile
+docker-compose.yml
+.dockerignore
