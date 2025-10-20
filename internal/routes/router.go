@@ -67,6 +67,8 @@ func (r *Registry) handleIndex(c *fiber.Ctx) error {
 		routes = append(routes, path)
 	}
 
+	c.Set("Content-Type", fiber.MIMEApplicationJSONCharsetUTF8)
+
 	return c.JSON(fiber.Map{
 		"code":    200,
 		"message": "DailyHotApi - Go 版本",
@@ -79,6 +81,7 @@ func (r *Registry) handleIndex(c *fiber.Ctx) error {
 // handleHealth 健康检查处理器
 // 用于监控系统判断服务是否正常运行
 func (r *Registry) handleHealth(c *fiber.Ctx) error {
+	c.Set("Content-Type", fiber.MIMEApplicationJSONCharsetUTF8)
 	return c.JSON(fiber.Map{
 		"status": "healthy",
 		"cache":  "ok",
@@ -89,6 +92,7 @@ func (r *Registry) handleHealth(c *fiber.Ctx) error {
 // 返回缓存系统的性能统计数据
 func (r *Registry) handleStats(c *fiber.Ctx) error {
 	stats := r.fetcher.GetCacheStats()
+	c.Set("Content-Type", fiber.MIMEApplicationJSONCharsetUTF8)
 	return c.JSON(fiber.Map{
 		"code":  200,
 		"stats": stats,
@@ -112,6 +116,7 @@ func (r *Registry) handleAll(c *fiber.Ctx) error {
 	}
 
 	// 返回路由列表信息
+	c.Set("Content-Type", fiber.MIMEApplicationJSONCharsetUTF8)
 	return c.JSON(fiber.Map{
 		"code":   200,
 		"count":  len(r.handlers),
